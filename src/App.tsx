@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { User, Mail, ArrowRight, Phone, Calendar, Users, DollarSign } from 'lucide-react';
 import type { FunnelData, Rates, MarketRates } from './types';
 
-// Import the background image (you can replace this with the actual path to your image)
-import monacoCircuit from '../assets/logo.png'; // Adjust the path as needed
+// Import the logo image
+import logo from '../assets/logo.png'; // Adjust the path as needed
 
 const marketRates: MarketRates = {
   leadsToAppointments: 5.1,
@@ -16,10 +16,36 @@ const marketRates: MarketRates = {
 };
 
 function App() {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(1); // Main step (1 for form, 2 for results)
+  const [formStep, setFormStep] = useState(1); // Sub-step for form questions
   const [rates, setRates] = useState<Rates | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<FunnelData>();
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const { register, handleSubmit, formState: { errors }, trigger, getValues } = useForm<FunnelData>();
+
+  // Pre-calculate funnel widths to avoid delays
+  const funnelWidths = {
+    leads: 100,
+    appointments: rates ? (getValues('appointments') / getValues('leads')) * 100 : 0,
+    attendance: rates ? (getValues('attendance') / getValues('leads')) * 100 : 0,
+    sales: rates ? (getValues('sales') / getValues('leads')) * 100 : 0
+  };
+
+  // Loading messages
+  const loadingMessages = [
+    'Analisando os dados do seu negócio...',
+    'Preparando sua análise de dados...'
+  ];
+
+  // Cycle through loading messages every 2 seconds
+  useEffect(() => {
+    if (isSubmitting) {
+      const interval = setInterval(() => {
+        setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [isSubmitting]);
 
   const calculateRates = (data: FunnelData): Rates => {
     return {
@@ -37,7 +63,7 @@ function App() {
       setRates(calculatedRates);
 
       const response = await axios.post(
-        'https://server-62bnhce9q-teusmamfs-projects.vercel.app/api/submit-form',
+        'https://back-end-funil-monaco.vercel.app/api/submit-form',
         {
           ...data,
           rates: calculatedRates,
@@ -65,227 +91,481 @@ function App() {
   const getRateLabel = (key: keyof Rates): string => {
     switch (key) {
       case 'leadsToAppointments':
-        return 'A taxa média do seu segmento de visitantes para Leads é';
+        return 'A taxa média do seu segmento de Leads para Oportunidades é';
       case 'appointmentsToAttendance':
-        return 'A taxa média do seu segmento de Leads para oportunidades é';
+        return 'A taxa média do seu segmento de Oportunidades para Comparecimentos é';
       case 'attendanceToSales':
-        return 'A taxa média do seu segmento de oportunidades para vendas é';
-      case 'leadsToSales':
-        return 'A taxa média do seu segmento de Leads para vendas é';
+        return 'A taxa média do seu segmento de Comparecimentos para Vendas é';
       default:
         return '';
     }
   };
 
+  // Handle moving to the next form step
+  const handleNext = async () => {
+    const fieldsToValidate = {
+      1: 'name',
+      2: 'email',
+      3: 'phone',
+      4: 'leads',
+      5: 'appointments',
+      6: 'attendance',
+      7: 'sales'
+    };
+
+    const field = fieldsToValidate[formStep as keyof typeof fieldsToValidate];
+    const isValid = await trigger(field);
+
+    if (isValid) {
+      if (formStep < 7) {
+        setFormStep(formStep + 1);
+      } else {
+        handleSubmit(onSubmit)();
+      }
+    }
+  };
+
+  // Handle moving to the previous form step
+  const handlePrevious = () => {
+    if (formStep > 1) {
+      setFormStep(formStep - 1);
+    }
+  };
+
+  // Input field animation variants
+  const inputVariants = {
+    hidden: { opacity: 0, x: -50 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+    exit: { opacity: 0, x: 50, transition: { duration: 0.5, ease: 'easeIn' } }
+  };
+
+  // Simplified funnel bar animation variants
+  const funnelBarVariants = {
+    hidden: { width: 0 },
+    visible: (custom: number) => ({
+      width: `${custom}%`,
+      transition: { duration: 0.5, ease: 'easeOut' }
+    })
+  };
+
+  // Loading message animation variants
+  const loadingMessageVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+    exit: { opacity: 0, y: -10, transition: { duration: 0.5 } }
+  };
+
   return (
-    <div
-      className="min-h-screen bg-black flex items-center justify-center p-4 md:p-8"
-      style={{
-        backgroundImage: `url(${monacoCircuit})`,
-        backgroundSize: 'contain', // Ensures the image fits without stretching
-        backgroundPosition: 'center', // Centers the image
-        backgroundRepeat: 'no-repeat', // Prevents tiling
-      }}
-    >
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-2xl w-full bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl shadow-xl p-6 md:p-8"
-      >
-        <h1 className="text-3xl font-bold text-white mb-6 text-center">
-          Análise de Funil Odontológico
-        </h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-200 to-blue-400">
+      {/* Navbar */}
+      <nav className="bg-[oklch(0.424_0.199_265.638)] p-4 shadow-md">
+        <div className="max-w-7xl mx-auto flex items-center">
+          <img src={logo} alt="Logo" className="h-10 w-auto" />
+        </div>
+      </nav>
 
-        {step === 1 && (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div>
-              <label className="flex items-center text-white mb-2">
-                <User className="w-5 h-5 mr-2 text-white" />
-                Nome Completo
-              </label>
-              <input
-                {...register("name", { required: "Nome é obrigatório" })}
-                className="w-full p-3 border border-white/30 bg-transparent text-white rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-white/50"
-                placeholder="Seu nome"
-              />
-              {errors.name && (
-                <span className="text-red-400 text-sm">{errors.name.message}</span>
-              )}
-            </div>
+      {/* Main Content */}
+      <div className="p-4 md:p-8 flex items-center justify-center min-h-[calc(100vh-64px)]">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-6xl w-full bg-white rounded-2xl shadow-xl p-6 md:p-8"
+        >
+          <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+            Análise de Funil Odontológico
+          </h1>
 
-            <div>
-              <label className="flex items-center text-white mb-2">
-                <Mail className="w-5 h-5 mr-2 text-white" />
-                E-mail
-              </label>
-              <input
-                {...register("email", { 
-                  required: "E-mail é obrigatório",
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "E-mail inválido"
-                  }
-                })}
-                className="w-full p-3 border border-white/30 bg-transparent text-white rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-white/50"
-                placeholder="seu@email.com"
-              />
-              {errors.email && (
-                <span className="text-red-400 text-sm">{errors.email.message}</span>
-              )}
-            </div>
-
-            <div>
-              <label className="flex items-center text-white mb-2">
-                <Phone className="w-5 h-5 mr-2 text-white" />
-                Telefone
-              </label>
-              <input
-                {...register("phone", { 
-                  required: "Telefone é obrigatório",
-                  pattern: {
-                    value: /^\+?[1-9]\d{1,14}$/,
-                    message: "Telefone inválido (use apenas números, opcionalmente com código de país)"
-                  }
-                })}
-                className="w-full p-3 border border-white/30 bg-transparent text-white rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-white/50"
-                placeholder="+5511999999999"
-              />
-              {errors.phone && (
-                <span className="text-red-400 text-sm">{errors.phone.message}</span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="flex items-center text-white mb-2">
-                  <Phone className="w-5 h-5 mr-2 text-white" />
-                  Leads Recebidos
-                </label>
-                <input
-                  type="number"
-                  {...register("leads", { required: true, min: 0 })}
-                  className="w-full p-3 border border-white/30 bg-transparent text-white rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-white/50"
-                  placeholder="0"
+          {/* Loading Animation */}
+          <AnimatePresence>
+            {isSubmitting && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center min-h-[400px]"
+              >
+                {/* Spinner */}
+                <motion.div
+                  className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 />
-              </div>
+                {/* Loading Messages */}
+                <div className="mt-6 text-lg text-gray-700">
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={loadingMessageIndex}
+                      variants={loadingMessageVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                    >
+                      {loadingMessages[loadingMessageIndex]}
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-              <div>
-                <label className="flex items-center text-white mb-2">
-                  <Calendar className="w-5 h-5 mr-2 text-white" />
-                  Agendamentos
-                </label>
-                <input
-                  type="number"
-                  {...register("appointments", { required: true, min: 0 })}
-                  className="w-full p-3 border border-white/30 bg-transparent text-white rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-white/50"
-                  placeholder="0"
-                />
-              </div>
+          {/* Form or Results */}
+          {!isSubmitting && step === 1 && (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <AnimatePresence mode="wait">
+                {formStep === 1 && (
+                  <motion.div
+                    key="name"
+                    variants={inputVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <label className="flex items-center text-gray-700 mb-2">
+                      <User className="w-5 h-5 mr-2 text-gray-700" />
+                      Nome Completo
+                    </label>
+                    <input
+                      {...register("name", { required: "Nome é obrigatório" })}
+                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
+                      placeholder="Seu nome"
+                    />
+                    {errors.name && (
+                      <span className="text-red-500 text-sm mt-1 block">{errors.name.message}</span>
+                    )}
+                  </motion.div>
+                )}
 
-              <div>
-                <label className="flex items-center text-white mb-2">
-                  <Users className="w-5 h-5 mr-2 text-white" />
-                  Comparecimentos
-                </label>
-                <input
-                  type="number"
-                  {...register("attendance", { required: true, min: 0 })}
-                  className="w-full p-3 border border-white/30 bg-transparent text-white rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-white/50"
-                  placeholder="0"
-                />
-              </div>
+                {formStep === 2 && (
+                  <motion.div
+                    key="email"
+                    variants={inputVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <label className="flex items-center text-gray-700 mb-2">
+                      <Mail className="w-5 h-5 mr-2 text-gray-700" />
+                      E-mail
+                    </label>
+                    <input
+                      {...register("email", { 
+                        required: "E-mail é obrigatório",
+                        pattern: {
+                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                          message: "E-mail inválido"
+                        }
+                      })}
+                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
+                      placeholder="seu@email.com"
+                    />
+                    {errors.email && (
+                      <span className="text-red-500 text-sm mt-1 block">{errors.email.message}</span>
+                    )}
+                  </motion.div>
+                )}
 
-              <div>
-                <label className="flex items-center text-white mb-2">
-                  <DollarSign className="w-5 h-5 mr-2 text-white" />
-                  Vendas Realizadas
-                </label>
-                <input
-                  type="number"
-                  {...register("sales", { required: true, min: 0 })}
-                  className="w-full p-3 border border-white/30 bg-transparent text-white rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-white/50"
-                  placeholder="0"
-                />
-              </div>
-            </div>
+                {formStep === 3 && (
+                  <motion.div
+                    key="phone"
+                    variants={inputVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <label className="flex items-center text-gray-700 mb-2">
+                      <Phone className="w-5 h-5 mr-2 text-gray-700" />
+                      Telefone
+                    </label>
+                    <input
+                      {...register("phone", { 
+                        required: "Telefone é obrigatório",
+                        pattern: {
+                          value: /^\+?[1-9]\d{1,14}$/,
+                          message: "Telefone inválido (use apenas números, opcionalmente com código de país)"
+                        }
+                      })}
+                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
+                      placeholder="+5511999999999"
+                    />
+                    {errors.phone && (
+                      <span className="text-red-500 text-sm mt-1 block">{errors.phone.message}</span>
+                    )}
+                  </motion.div>
+                )}
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              disabled={isSubmitting}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 disabled:opacity-70 hover:bg-blue-700 transition-colors"
-              type="submit"
+                {formStep === 4 && (
+                  <motion.div
+                    key="leads"
+                    variants={inputVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <label className="flex items-center text-gray-700 mb-2">
+                      <Phone className="w-5 h-5 mr-2 text-gray-700" />
+                      Leads Recebidos
+                    </label>
+                    <input
+                      type="number"
+                      {...register("leads", { required: "Este campo é obrigatório", min: 0 })}
+                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
+                      placeholder="0"
+                    />
+                    {errors.leads && (
+                      <span className="text-red-500 text-sm mt-1 block">{errors.leads.message}</span>
+                    )}
+                  </motion.div>
+                )}
+
+                {formStep === 5 && (
+                  <motion.div
+                    key="appointments"
+                    variants={inputVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <label className="flex items-center text-gray-700 mb-2">
+                      <Calendar className="w-5 h-5 mr-2 text-gray-700" />
+                      Agendamentos
+                    </label>
+                    <input
+                      type="number"
+                      {...register("appointments", { required: "Este campo é obrigatório", min: 0 })}
+                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
+                      placeholder="0"
+                    />
+                    {errors.appointments && (
+                      <span className="text-red-500 text-sm mt-1 block">{errors.appointments.message}</span>
+                    )}
+                  </motion.div>
+                )}
+
+                {formStep === 6 && (
+                  <motion.div
+                    key="attendance"
+                    variants={inputVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <label className="flex items-center text-gray-700 mb-2">
+                      <Users className="w-5 h-5 mr-2 text-gray-700" />
+                      Comparecimentos
+                    </label>
+                    <input
+                      type="number"
+                      {...register("attendance", { required: "Este campo é obrigatório", min: 0 })}
+                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
+                      placeholder="0"
+                    />
+                    {errors.attendance && (
+                      <span className="text-red-500 text-sm mt-1 block">{errors.attendance.message}</span>
+                    )}
+                  </motion.div>
+                )}
+
+                {formStep === 7 && (
+                  <motion.div
+                    key="sales"
+                    variants={inputVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <label className="flex items-center text-gray-700 mb-2">
+                      <DollarSign className="w-5 h-5 mr-2 text-gray-700" />
+                      Vendas Realizadas
+                    </label>
+                    <input
+                      type="number"
+                      {...register("sales", { required: "Este campo é obrigatório", min: 0 })}
+                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
+                      placeholder="0"
+                    />
+                    {errors.sales && (
+                      <span className="text-red-500 text-sm mt-1 block">{errors.sales.message}</span>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Navigation Buttons */}
+              <div className="flex justify-between mt-6">
+                {formStep > 1 && (
+                  <motion.button
+                    type="button"
+                    onClick={handlePrevious}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-gray-500 text-white py-3 px-6 rounded-lg font-semibold flex items-center justify-center space-x-2 hover:bg-gray-600 transition-colors"
+                  >
+                    <span>Voltar</span>
+                  </motion.button>
+                )}
+                <motion.button
+                  type="button"
+                  onClick={handleNext}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  disabled={isSubmitting}
+                  className="bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold flex items-center justify-center space-x-2 disabled:opacity-70 hover:bg-blue-700 transition-colors ml-auto"
+                >
+                  <span>{isSubmitting ? 'Enviando...' : formStep === 7 ? 'Analisar Resultados' : 'Próximo'}</span>
+                  <ArrowRight className="w-5 h-5" />
+                </motion.button>
+              </div>
+            </form>
+          )}
+
+          {!isSubmitting && step === 2 && rates && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-8"
             >
-              <span>{isSubmitting ? 'Enviando...' : 'Analisar Resultados'}</span>
-              <ArrowRight className="w-5 h-5" />
-            </motion.button>
-          </form>
-        )}
-
-        {step === 2 && rates && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-6"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-4 rounded-lg">
-                <h3 className="font-semibold text-lg mb-2 text-white">Ticket médio</h3>
-                <p className="text-2xl font-bold text-white">R$ 4.000,00</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-4 rounded-lg">
-                <h3 className="font-semibold text-lg mb-2 text-white">Faturamento médio</h3>
-                <p className="text-2xl font-bold text-blue-400">R$ 12.000,00</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {Object.entries(rates).map(([key, value]) => {
-                const marketRate = marketRates[key as keyof MarketRates];
-                const isAboveAverage = value >= marketRate;
-
-                return (
-                  <div key={key} className="bg-white/10 backdrop-blur-lg border border-white/20 p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="text-4xl font-bold">
-                        <span className={isAboveAverage ? 'text-green-400' : 'text-red-400'}>
-                          {value.toFixed(1)}%
-                        </span>
+              {/* Funnel Visualization */}
+              <div className="space-y-6">
+                {/* Leads */}
+                <div className="flex items-center">
+                  <div className="w-40 text-gray-700 font-semibold">Leads</div>
+                  <div className="flex-1 flex items-center">
+                    <motion.div
+                      className="h-12 bg-cyan-400 rounded-l-lg"
+                      variants={funnelBarVariants}
+                      initial="hidden"
+                      animate="visible"
+                      custom={funnelWidths.leads}
+                      style={{ minWidth: '200px' }}
+                    >
+                      <div className="h-full flex items-center justify-end pr-4 text-white font-bold">
+                        {getValues('leads')}
                       </div>
-                      <div className="text-4xl font-bold text-blue-400">
-                        {marketRate}%
-                      </div>
-                    </div>
-                    <p className="text-gray-300 mb-2">
-                      {getRateLabel(key as keyof Rates)} {marketRate}%.
+                    </motion.div>
+                    <div className="w-8 h-12 bg-gray-300 rounded-r-lg" />
+                  </div>
+                  <div className="w-24 text-center text-gray-600">{rates.leadsToAppointments.toFixed(1)}%</div>
+                  <div className="w-64 bg-cyan-100 p-4 rounded-lg shadow-md">
+                    <p className="text-gray-700 font-medium">
+                      A taxa média do seu segmento de Leads para Oportunidades é {marketRates.leadsToAppointments}%.
                     </p>
-                    <p className={`text-lg font-medium ${isAboveAverage ? 'text-green-400' : 'text-red-400'}`}>
-                      {isAboveAverage 
-                        ? "Você está acima da média do segmento de Saúde e Estética. Ótimo trabalho!"
-                        : "Você está abaixo da média do segmento de Saúde e Estética. Com certeza ainda tem espaço para melhorias!"}
+                    <p className={`mt-2 font-semibold ${rates.leadsToAppointments >= marketRates.leadsToAppointments ? 'text-green-600' : 'text-red-600'}`}>
+                      {rates.leadsToAppointments >= marketRates.leadsToAppointments
+                        ? 'Ótimo trabalho!'
+                        : 'Com certeza ainda tem espaço para melhorias!'}
                     </p>
                   </div>
-                );
-              })}
-            </div>
+                </div>
 
-            <motion.a
-              href={`https://wa.me/SEUNUMERO?text=${encodeURIComponent(
-                `Olá! Analisei meu funil e gostaria de melhorar meus resultados. Minhas taxas são:\n` +
-                `Leads para Agendamentos: ${rates.leadsToAppointments.toFixed(1)}%\n` +
-                `Agendamentos para Comparecimentos: ${rates.appointmentsToAttendance.toFixed(1)}%\n` +
-                `Comparecimentos para Vendas: ${rates.attendanceToSales.toFixed(1)}%\n` +
-                `Leads para Vendas: ${rates.leadsToSales.toFixed(1)}%`
-              )}`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="block w-full bg-green-600 text-white py-3 rounded-lg font-semibold text-center mt-6 hover:bg-green-700 transition-colors"
-            >
-              Quero ajuda para melhorar meu funil
-            </motion.a>
-          </motion.div>
-        )}
-      </motion.div>
+                {/* Oportunidades (Appointments) */}
+                <div className="flex items-center">
+                  <div className="w-40 text-gray-700 font-semibold">Oportunidades</div>
+                  <div className="flex-1 flex items-center">
+                    <motion.div
+                      className="h-12 bg-cyan-400 rounded-l-lg"
+                      variants={funnelBarVariants}
+                      initial="hidden"
+                      animate="visible"
+                      custom={funnelWidths.appointments}
+                      style={{ minWidth: '200px' }}
+                    >
+                      <div className="h-full flex items-center justify-end pr-4 text-white font-bold">
+                        {getValues('appointments')}
+                      </div>
+                    </motion.div>
+                    <div className="w-8 h-12 bg-gray-300 rounded-r-lg" />
+                  </div>
+                  <div className="w-24 text-center text-gray-600">{rates.appointmentsToAttendance.toFixed(1)}%</div>
+                  <div className="w-64 bg-cyan-100 p-4 rounded-lg shadow-md">
+                    <p className="text-gray-700 font-medium">
+                      A taxa média do seu segmento de Oportunidades para Comparecimentos é {marketRates.appointmentsToAttendance}%.
+                    </p>
+                    <p className={`mt-2 font-semibold ${rates.appointmentsToAttendance >= marketRates.appointmentsToAttendance ? 'text-green-600' : 'text-red-600'}`}>
+                      {rates.appointmentsToAttendance >= marketRates.appointmentsToAttendance
+                        ? 'Ótimo trabalho!'
+                        : 'Com certeza ainda tem espaço para melhorias!'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Comparecimentos (Attendance) */}
+                <div className="flex items-center">
+                  <div className="w-40 text-gray-700 font-semibold">Comparecimentos</div>
+                  <div className="flex-1 flex items-center">
+                    <motion.div
+                      className="h-12 bg-cyan-400 rounded-l-lg"
+                      variants={funnelBarVariants}
+                      initial="hidden"
+                      animate="visible"
+                      custom={funnelWidths.attendance}
+                      style={{ minWidth: '200px' }}
+                    >
+                      <div className="h-full flex items-center justify-end pr-4 text-white font-bold">
+                        {getValues('attendance')}
+                      </div>
+                    </motion.div>
+                    <div className="w-8 h-12 bg-gray-300 rounded-r-lg" />
+                  </div>
+                  <div className="w-24 text-center text-gray-600">{rates.attendanceToSales.toFixed(1)}%</div>
+                  <div className="w-64 bg-cyan-100 p-4 rounded-lg shadow-md">
+                    <p className="text-gray-700 font-medium">
+                      A taxa média do seu segmento de Comparecimentos para Vendas é {marketRates.attendanceToSales}%.
+                    </p>
+                    <p className={`mt-2 font-semibold ${rates.attendanceToSales >= marketRates.attendanceToSales ? 'text-green-600' : 'text-red-600'}`}>
+                      {rates.attendanceToSales >= marketRates.attendanceToSales
+                        ? 'Ótimo trabalho!'
+                        : 'Com certeza ainda tem espaço para melhorias!'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Vendas (Sales) */}
+                <div className="flex items-center">
+                  <div className="w-40 text-gray-700 font-semibold">Vendas</div>
+                  <div className="flex-1 flex items-center">
+                    <motion.div
+                      className="h-12 bg-red-500 rounded-l-lg"
+                      variants={funnelBarVariants}
+                      initial="hidden"
+                      animate="visible"
+                      custom={funnelWidths.sales}
+                      style={{ minWidth: '200px' }}
+                    >
+                      <div className="h-full flex items-center justify-end pr-4 text-white font-bold">
+                        {getValues('sales')}
+                      </div>
+                    </motion.div>
+                    <div className="w-8 h-12 bg-gray-300 rounded-r-lg" />
+                  </div>
+                  <div className="w-24"></div> {/* Empty space to align with above rows */}
+                  <div className="w-64 bg-gray-100 p-4 rounded-lg shadow-md">
+                    <p className="text-gray-700 font-medium">Ticket médio</p>
+                    <p className="text-2xl font-bold text-gray-800">R$ 4.000,00</p>
+                    <p className="text-gray-700 font-medium mt-2">Faturamento médio</p>
+                    <p className="text-2xl font-bold text-blue-600">R$ {(4000 * getValues('sales')).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* WhatsApp Button */}
+              <motion.a
+                href={`https://wa.me/+554598407452?text=${encodeURIComponent(
+                  `Olá! Analisei meu funil e gostaria de melhorar meus resultados. Minhas taxas são:\n` +
+                  `Leads para Oportunidades: ${rates.leadsToAppointments.toFixed(1)}%\n` +
+                  `Oportunidades para Comparecimentos: ${rates.appointmentsToAttendance.toFixed(1)}%\n` +
+                  `Comparecimentos para Vendas: ${rates.attendanceToSales.toFixed(1)}%\n` +
+                  `Leads para Vendas: ${rates.leadsToSales.toFixed(1)}%`
+                )}`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="block w-full bg-green-600 text-white py-3 rounded-lg font-semibold text-center mt-6 hover:bg-green-700 transition-colors"
+              >
+                Quero ajuda para melhorar meu funil
+              </motion.a>
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 }
