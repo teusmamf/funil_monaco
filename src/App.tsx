@@ -96,6 +96,8 @@ function App() {
         return 'A taxa média do seu segmento de Oportunidades para Comparecimentos é';
       case 'attendanceToSales':
         return 'A taxa média do seu segmento de Comparecimentos para Vendas é';
+      case 'leadsToSales':
+        return 'A taxa média do seu segmento de Leads para Vendas é';
       default:
         return '';
     }
@@ -191,7 +193,7 @@ function App() {
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 />
                 {/* Loading Messages */}
-                <div className="mt-6 text-lg text-gray-700">
+                <div className="mt-6 text-lg text-gray-600">
                   <AnimatePresence mode="wait">
                     <motion.p
                       key={loadingMessageIndex}
@@ -427,8 +429,8 @@ function App() {
               {/* Funnel Visualization */}
               <div className="space-y-6">
                 {/* Leads */}
-                <div className="flex items-center">
-                  <div className="w-40 text-gray-700 font-semibold">Leads</div>
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="w-full md:w-40 text-gray-700 font-semibold">Leads</div>
                   <div className="flex-1 flex items-center">
                     <motion.div
                       className="h-12 bg-cyan-400 rounded-l-lg"
@@ -444,10 +446,10 @@ function App() {
                     </motion.div>
                     <div className="w-8 h-12 bg-gray-300 rounded-r-lg" />
                   </div>
-                  <div className="w-24 text-center text-gray-600">{rates.leadsToAppointments.toFixed(1)}%</div>
-                  <div className="w-64 bg-cyan-100 p-4 rounded-lg shadow-md">
+                  <div className="w-full md:w-24 text-center text-gray-600">{rates.leadsToAppointments.toFixed(1)}%</div>
+                  <div className="w-full md:w-64 bg-cyan-100 p-4 rounded-lg shadow-md">
                     <p className="text-gray-700 font-medium">
-                      A taxa média do seu segmento de Leads para Oportunidades é {marketRates.leadsToAppointments}%.
+                      {getRateLabel('leadsToAppointments')} {marketRates.leadsToAppointments}%.
                     </p>
                     <p className={`mt-2 font-semibold ${rates.leadsToAppointments >= marketRates.leadsToAppointments ? 'text-green-600' : 'text-red-600'}`}>
                       {rates.leadsToAppointments >= marketRates.leadsToAppointments
@@ -458,8 +460,8 @@ function App() {
                 </div>
 
                 {/* Oportunidades (Appointments) */}
-                <div className="flex items-center">
-                  <div className="w-40 text-gray-700 font-semibold">Oportunidades</div>
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="w-full md:w-40 text-gray-700 font-semibold">Oportunidades</div>
                   <div className="flex-1 flex items-center">
                     <motion.div
                       className="h-12 bg-cyan-400 rounded-l-lg"
@@ -475,10 +477,10 @@ function App() {
                     </motion.div>
                     <div className="w-8 h-12 bg-gray-300 rounded-r-lg" />
                   </div>
-                  <div className="w-24 text-center text-gray-600">{rates.appointmentsToAttendance.toFixed(1)}%</div>
-                  <div className="w-64 bg-cyan-100 p-4 rounded-lg shadow-md">
+                  <div className="w-full md:w-24 text-center text-gray-600">{rates.appointmentsToAttendance.toFixed(1)}%</div>
+                  <div className="w-full md:w-64 bg-cyan-100 p-4 rounded-lg shadow-md">
                     <p className="text-gray-700 font-medium">
-                      A taxa média do seu segmento de Oportunidades para Comparecimentos é {marketRates.appointmentsToAttendance}%.
+                      {getRateLabel('appointmentsToAttendance')} {marketRates.appointmentsToAttendance}%.
                     </p>
                     <p className={`mt-2 font-semibold ${rates.appointmentsToAttendance >= marketRates.appointmentsToAttendance ? 'text-green-600' : 'text-red-600'}`}>
                       {rates.appointmentsToAttendance >= marketRates.appointmentsToAttendance
@@ -489,8 +491,8 @@ function App() {
                 </div>
 
                 {/* Comparecimentos (Attendance) */}
-                <div className="flex items-center">
-                  <div className="w-40 text-gray-700 font-semibold">Comparecimentos</div>
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="w-full md:w-40 text-gray-700 font-semibold">Comparecimentos</div>
                   <div className="flex-1 flex items-center">
                     <motion.div
                       className="h-12 bg-cyan-400 rounded-l-lg"
@@ -506,10 +508,10 @@ function App() {
                     </motion.div>
                     <div className="w-8 h-12 bg-gray-300 rounded-r-lg" />
                   </div>
-                  <div className="w-24 text-center text-gray-600">{rates.attendanceToSales.toFixed(1)}%</div>
-                  <div className="w-64 bg-cyan-100 p-4 rounded-lg shadow-md">
+                  <div className="w-full md:w-24 text-center text-gray-600">{rates.attendanceToSales.toFixed(1)}%</div>
+                  <div className="w-full md:w-64 bg-cyan-100 p-4 rounded-lg shadow-md">
                     <p className="text-gray-700 font-medium">
-                      A taxa média do seu segmento de Comparecimentos para Vendas é {marketRates.attendanceToSales}%.
+                      {getRateLabel('attendanceToSales')} {marketRates.attendanceToSales}%.
                     </p>
                     <p className={`mt-2 font-semibold ${rates.attendanceToSales >= marketRates.attendanceToSales ? 'text-green-600' : 'text-red-600'}`}>
                       {rates.attendanceToSales >= marketRates.attendanceToSales
@@ -520,8 +522,8 @@ function App() {
                 </div>
 
                 {/* Vendas (Sales) */}
-                <div className="flex items-center">
-                  <div className="w-40 text-gray-700 font-semibold">Vendas</div>
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="w-full md:w-40 text-gray-700 font-semibold">Vendas</div>
                   <div className="flex-1 flex items-center">
                     <motion.div
                       className="h-12 bg-red-500 rounded-l-lg"
@@ -537,12 +539,16 @@ function App() {
                     </motion.div>
                     <div className="w-8 h-12 bg-gray-300 rounded-r-lg" />
                   </div>
-                  <div className="w-24"></div> {/* Empty space to align with above rows */}
-                  <div className="w-64 bg-gray-100 p-4 rounded-lg shadow-md">
-                    <p className="text-gray-700 font-medium">Ticket médio</p>
-                    <p className="text-2xl font-bold text-gray-800">R$ 4.000,00</p>
-                    <p className="text-gray-700 font-medium mt-2">Faturamento médio</p>
-                    <p className="text-2xl font-bold text-blue-600">R$ {(4000 * getValues('sales')).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <div className="w-full md:w-24 text-center text-gray-600">{rates.leadsToSales.toFixed(1)}%</div>
+                  <div className="w-full md:w-64 bg-cyan-100 p-4 rounded-lg shadow-md">
+                    <p className="text-gray-700 font-medium">
+                      {getRateLabel('leadsToSales')} {marketRates.leadsToSales}%.
+                    </p>
+                    <p className={`mt-2 font-semibold ${rates.leadsToSales >= marketRates.leadsToSales ? 'text-green-600' : 'text-red-600'}`}>
+                      {rates.leadsToSales >= marketRates.leadsToSales
+                        ? 'Ótimo trabalho!'
+                        : 'Com certeza ainda tem espaço para melhorias!'}
+                    </p>
                   </div>
                 </div>
               </div>
