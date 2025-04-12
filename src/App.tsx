@@ -105,19 +105,23 @@ function App() {
 
   // Handle moving to the next form step
   const handleNext = async () => {
+    // Mapeia os campos que devem ser validados em cada passo
     const fieldsToValidate = {
-      1: 'name',
-      2: 'email',
-      3: 'phone',
-      4: 'leads',
-      5: 'appointments',
-      6: 'attendance',
-      7: 'sales'
+      1: ['name'],
+      2: ['email'],
+      3: ['phone'],
+      4: ['leads'],
+      5: ['appointments'],
+      6: ['attendance'],
+      7: ['sales']
     };
-
-    const field = fieldsToValidate[formStep as keyof typeof fieldsToValidate];
-    const isValid = await trigger(field);
-
+  
+    // Obtém os campos a serem validados para o passo atual
+    const fields = fieldsToValidate[formStep as keyof typeof fieldsToValidate];
+    
+    // Valida todos os campos necessários para o passo atual
+    const isValid = await trigger(fields);
+  
     if (isValid) {
       if (formStep < 7) {
         setFormStep(formStep + 1);
@@ -126,7 +130,6 @@ function App() {
       }
     }
   };
-
   // Handle moving to the previous form step
   const handlePrevious = () => {
     if (formStep > 1) {
@@ -171,9 +174,9 @@ function App() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-6xl w-full bg-white rounded-2xl shadow-xl p-6 md:p-8"
+          className="w-full max-w-full md:max-w-7xl bg-white rounded-2xl shadow-xl p-4 md:p-12 min-h-[400px] md:min-h-[600px]"
         >
-          <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 text-center">
             Análise de Funil Odontológico
           </h1>
 
@@ -193,7 +196,7 @@ function App() {
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 />
                 {/* Loading Messages */}
-                <div className="mt-6 text-lg text-gray-600">
+                <div className="mt-6 text-base md:text-lg text-gray-600">
                   <AnimatePresence mode="wait">
                     <motion.p
                       key={loadingMessageIndex}
@@ -212,212 +215,221 @@ function App() {
 
           {/* Form or Results */}
           {!isSubmitting && step === 1 && (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <AnimatePresence mode="wait">
-                {formStep === 1 && (
-                  <motion.div
-                    key="name"
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                  >
-                    <label className="flex items-center text-gray-700 mb-2">
-                      <User className="w-5 h-5 mr-2 text-gray-700" />
-                      Nome Completo
-                    </label>
-                    <input
-                      {...register("name", { required: "Nome é obrigatório" })}
-                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
-                      placeholder="Seu nome"
-                    />
-                    {errors.name && (
-                      <span className="text-red-500 text-sm mt-1 block">{errors.name.message}</span>
-                    )}
-                  </motion.div>
-                )}
+            <div className="flex flex-col justify-between h-full">
+              {/* Empty Space at the Top */}
+              <div className="flex-1"></div>
 
-                {formStep === 2 && (
-                  <motion.div
-                    key="email"
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                  >
-                    <label className="flex items-center text-gray-700 mb-2">
-                      <Mail className="w-5 h-5 mr-2 text-gray-700" />
-                      E-mail
-                    </label>
-                    <input
-                      {...register("email", { 
-                        required: "E-mail é obrigatório",
-                        pattern: {
-                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                          message: "E-mail inválido"
-                        }
-                      })}
-                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
-                      placeholder="seu@email.com"
-                    />
-                    {errors.email && (
-                      <span className="text-red-500 text-sm mt-1 block">{errors.email.message}</span>
-                    )}
-                  </motion.div>
-                )}
+              {/* Input Fields at the Bottom */}
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-20">
+                <AnimatePresence mode="wait">
+                  {formStep === 1 && (
+                    <motion.div
+                      key="name"
+                      variants={inputVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className=''
+                    >
+                      <label className="flex items-center text-gray-700 mb-2 text-sm md:text-base">
+                        <User className="w-5 h-5 mr-2 text-gray-700" />
+                        Qual o seu nome?
+                      </label>
+                      <input
+                        {...register("name", { required: "Nome é obrigatório" })}
+                        className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md text-sm md:text-base"
+                        placeholder="Seu nome"
+                      />
+                      {errors.name && (
+                        <span className="text-red-500 text-sm mt-1 block">{errors.name.message}</span>
+                      )}
+                    </motion.div>
+                  )}
 
-                {formStep === 3 && (
-                  <motion.div
-                    key="phone"
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                  >
-                    <label className="flex items-center text-gray-700 mb-2">
-                      <Phone className="w-5 h-5 mr-2 text-gray-700" />
-                      Telefone
-                    </label>
-                    <input
-                      {...register("phone", { 
-                        required: "Telefone é obrigatório",
-                        pattern: {
-                          value: /^\+?[1-9]\d{1,14}$/,
-                          message: "Telefone inválido (use apenas números, opcionalmente com código de país)"
-                        }
-                      })}
-                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
-                      placeholder="+5511999999999"
-                    />
-                    {errors.phone && (
-                      <span className="text-red-500 text-sm mt-1 block">{errors.phone.message}</span>
-                    )}
-                  </motion.div>
-                )}
+                  {formStep === 2 && (
+                    <motion.div
+                      key="email"
+                      variants={inputVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                    >
+                      <label className="flex items-center text-gray-700 mb-2 text-sm md:text-base">
+                        <Mail className="w-5 h-5 mr-2 text-gray-700" />
+                        E-mail
+                      </label>
+                      <input
+                        {...register("email", { 
+                          required: "E-mail é obrigatório",
+                          pattern: {
+                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                            message: "E-mail inválido"
+                          }
+                        })}
+                        className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md text-sm md:text-base"
+                        placeholder="seu@email.com"
+                      />
+                      {errors.email && (
+                        <span className="text-red-500 text-sm mt-1 block">{errors.email.message}</span>
+                      )}
+                    </motion.div>
+                  )}
 
-                {formStep === 4 && (
-                  <motion.div
-                    key="leads"
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                  >
-                    <label className="flex items-center text-gray-700 mb-2">
-                      <Phone className="w-5 h-5 mr-2 text-gray-700" />
-                      Leads Recebidos
-                    </label>
-                    <input
-                      type="number"
-                      {...register("leads", { required: "Este campo é obrigatório", min: 0 })}
-                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
-                      placeholder="0"
-                    />
-                    {errors.leads && (
-                      <span className="text-red-500 text-sm mt-1 block">{errors.leads.message}</span>
-                    )}
-                  </motion.div>
-                )}
+                  {formStep === 3 && (
+                    <motion.div
+                      key="phone"
+                      variants={inputVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                    >
+                      <label className="flex items-center text-gray-700 mb-2 text-sm md:text-base">
+                        <Phone className="w-5 h-5 mr-2 text-gray-700" />
+                        Telefone
+                      </label>
+                      <input
+                        {...register("phone", { 
+                          required: "Telefone é obrigatório",
+                          pattern: {
+                            value: /^\+?[1-9]\d{1,14}$/,
+                            message: "Telefone inválido (use apenas números, opcionalmente com código de país)"
+                          }
+                        })}
+                        className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md text-sm md:text-base"
+                        placeholder="+5511999999999"
+                      />
+                      {errors.phone && (
+                        <span className="text-red-500 text-sm mt-1 block">{errors.phone.message}</span>
+                      )}
+                    </motion.div>
+                  )}
 
-                {formStep === 5 && (
-                  <motion.div
-                    key="appointments"
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                  >
-                    <label className="flex items-center text-gray-700 mb-2">
-                      <Calendar className="w-5 h-5 mr-2 text-gray-700" />
-                      Agendamentos
-                    </label>
-                    <input
-                      type="number"
-                      {...register("appointments", { required: "Este campo é obrigatório", min: 0 })}
-                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
-                      placeholder="0"
-                    />
-                    {errors.appointments && (
-                      <span className="text-red-500 text-sm mt-1 block">{errors.appointments.message}</span>
-                    )}
-                  </motion.div>
-                )}
+                  {formStep === 4 && (
+                    <motion.div
+                      key="leads"
+                      variants={inputVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                    >
+                      <label className="flex items-center text-gray-700 mb-2 text-sm md:text-base">
+                        <Phone className="w-5 h-5 mr-2 text-gray-700" />
+                        Leads Recebidos
+                      </label>
+                      <input
+                        type="number"
+                        {...register("leads", { required: "Este campo é obrigatório", min: 0 })}
+                        className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md text-sm md:text-base"
+                        placeholder="0"
+                      />
+                      {errors.leads && (
+                        <span className="text-red-500 text-sm mt-1 block">{errors.leads.message}</span>
+                      )}
+                    </motion.div>
+                  )}
 
-                {formStep === 6 && (
-                  <motion.div
-                    key="attendance"
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                  >
-                    <label className="flex items-center text-gray-700 mb-2">
-                      <Users className="w-5 h-5 mr-2 text-gray-700" />
-                      Comparecimentos
-                    </label>
-                    <input
-                      type="number"
-                      {...register("attendance", { required: "Este campo é obrigatório", min: 0 })}
-                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
-                      placeholder="0"
-                    />
-                    {errors.attendance && (
-                      <span className="text-red-500 text-sm mt-1 block">{errors.attendance.message}</span>
-                    )}
-                  </motion.div>
-                )}
+                  {formStep === 5 && (
+                    <motion.div
+                      key="appointments"
+                      variants={inputVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                    >
+                      <label className="flex items-center text-gray-700 mb-2 text-sm md:text-base">
+                        <Calendar className="w-5 h-5 mr-2 text-gray-700" />
+                        Agendamentos
+                      </label>
+                      <input
+                        type="number"
+                        {...register("appointments", { required: "Este campo é obrigatório", min: 0 })}
+                        className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md text-sm md:text-base"
+                        placeholder="0"
+                      />
+                      {errors.appointments && (
+                        <span className="text-red-500 text-sm mt-1 block">{errors.appointments.message}</span>
+                      )}
+                    </motion.div>
+                  )}
 
-                {formStep === 7 && (
-                  <motion.div
-                    key="sales"
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                  >
-                    <label className="flex items-center text-gray-700 mb-2">
-                      <DollarSign className="w-5 h-5 mr-2 text-gray-700" />
-                      Vendas Realizadas
-                    </label>
-                    <input
-                      type="number"
-                      {...register("sales", { required: "Este campo é obrigatório", min: 0 })}
-                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md"
-                      placeholder="0"
-                    />
-                    {errors.sales && (
-                      <span className="text-red-500 text-sm mt-1 block">{errors.sales.message}</span>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  {formStep === 6 && (
+                    <motion.div
+                      key="attendance"
+                      variants={inputVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                    >
+                      <label className="flex items-center text-gray-700 mb-2 text-sm md:text-base">
+                        <Users className="w-5 h-5 mr-2 text-gray-700" />
+                        Comparecimentos
+                      </label>
+                      <input
+                        type="number"
+                        {...register("attendance", { required: "Este campo é obrigatório", min: 0 })}
+                        className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md text-sm md:text-base"
+                        placeholder="0"
+                      />
+                      {errors.attendance && (
+                        <span className="text-red-500 text-sm mt-1 block">{errors.attendance.message}</span>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {formStep === 7 && (
+                    <motion.div
+                      key="sales"
+                      variants={inputVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                    >
+                      <label className="flex items-center text-gray-700 mb-2 text-sm md:text-base">
+                        <DollarSign className="w-5 h-5 mr-2 text-gray-700" />
+                        Vendas Realizadas
+                      </label>
+                      <input
+                        type="number"
+                        {...register("sales", { required: "Este campo é obrigatório", min: 0 })}
+                        className="w-full p-4 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 shadow-sm transition-all duration-300 hover:shadow-md text-sm md:text-base"
+                        placeholder="0"
+                      />
+                      {errors.sales && (
+                        <span className="text-red-500 text-sm mt-1 block">{errors.sales.message}</span>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </form>
 
               {/* Navigation Buttons */}
-              <div className="flex justify-between mt-6">
-                {formStep > 1 && (
+              <div className="mt-6">
+                <div className="flex justify-between">
+                  {formStep > 1 && (
+                    <motion.button
+                      type="button"
+                      onClick={handlePrevious}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-gray-500 text-white py-3 px-6 rounded-lg font-semibold flex items-center justify-center space-x-2 hover:bg-gray-600 transition-colors text-sm md:text-base"
+                    >
+                      <span>Voltar</span>
+                    </motion.button>
+                  )}
                   <motion.button
                     type="button"
-                    onClick={handlePrevious}
+                    onClick={handleNext}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="bg-gray-500 text-white py-3 px-6 rounded-lg font-semibold flex items-center justify-center space-x-2 hover:bg-gray-600 transition-colors"
+                    disabled={isSubmitting}
+                    className="bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold flex items-center justify-center space-x-2 disabled:opacity-70 hover:bg-blue-700 transition-colors ml-auto text-sm md:text-base"
                   >
-                    <span>Voltar</span>
+                    <span>{isSubmitting ? 'Enviando...' : formStep === 7 ? 'Analisar Resultados' : 'Próximo'}</span>
+                    <ArrowRight className="w-5 h-5" />
                   </motion.button>
-                )}
-                <motion.button
-                  type="button"
-                  onClick={handleNext}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  disabled={isSubmitting}
-                  className="bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold flex items-center justify-center space-x-2 disabled:opacity-70 hover:bg-blue-700 transition-colors ml-auto"
-                >
-                  <span>{isSubmitting ? 'Enviando...' : formStep === 7 ? 'Analisar Resultados' : 'Próximo'}</span>
-                  <ArrowRight className="w-5 h-5" />
-                </motion.button>
+                </div>
               </div>
-            </form>
+            </div>
           )}
 
           {!isSubmitting && step === 2 && rates && (
@@ -564,7 +576,7 @@ function App() {
                 )}`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="block w-full bg-green-600 text-white py-3 rounded-lg font-semibold text-center mt-6 hover:bg-green-700 transition-colors"
+                className="block w-full bg-green-600 text-white py-3 rounded-lg font-semibold text-center mt-6 hover:bg-green-700 transition-colors text-sm md:text-base"
               >
                 Quero ajuda para melhorar meu funil
               </motion.a>
